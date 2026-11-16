@@ -6,7 +6,7 @@
 <!-- What this page may run and reach (dev/README.md, "What the page may load"). The one script is
      named by its hash, which build.js works out: nothing else runs, not even a handler written
      into the page by a fault. Requests go to the hosts listed here and to no other. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ZfyU0eHPMTJ0RgoN7A+sXKzTpEFoxfuxkUTvscPxZWE='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://*.scryfall.io https://api.scryfall.com; connect-src https://api.scryfall.com https://data.scryfall.io https://json.edhrec.com https://adenroedhaaret.github.io; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ZHF421ooMlIUdRevaFEO6NtK0CtRM/cmBu3irn4oHDg='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://*.scryfall.io https://api.scryfall.com; connect-src https://api.scryfall.com https://data.scryfall.io https://json.edhrec.com https://adenroedhaaret.github.io; base-uri 'none'; form-action 'none'">
 <title>MTG Collection</title>
 <style>
 :root{
@@ -8693,11 +8693,20 @@ async function abApplyWorld(w){
 }
 
 function abPickFile(){
+  /* His iPhone, 17 Nov 2026: a backup file in OneDrive was tapped and nothing happened. On a phone
+     the picker asks for no file type (iOS does not see every provider's .json as JSON; the file
+     is checked on reading anyway, abParseWorld), and the field stands in the page while the
+     picker is open (on some iOS versions a field outside the page hears nothing back). */
+  document.querySelectorAll("input.abpick").forEach(n => n.remove());
   const inp = document.createElement("input");
   inp.type = "file";
-  inp.accept = ".json,application/json";
+  inp.className = "abpick";
+  if (!(typeof isPhone === "function" && isPhone())) inp.accept = ".json,application/json";
+  inp.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0";
+  document.body.appendChild(inp);
   inp.addEventListener("change", async () => {
     const f = inp.files && inp.files[0];
+    inp.remove();
     if (!f) return;
     const w = abParseWorld(await f.text());
     if (w.bad){ fsProblem = w.bad; fsLoadedFrom = ""; fsRender(); return; }
