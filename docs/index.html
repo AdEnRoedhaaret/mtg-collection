@@ -351,6 +351,13 @@ html.phone main{padding:14px 12px 24px}
 /* fields big enough that iPhone does not zoom in, buttons big enough for a finger */
 html.phone input:not([type=checkbox]):not([type=radio]):not([type=range]),html.phone select,html.phone textarea{font-size:16px}
 html.phone button{min-height:36px}
+/* the buttons on the pages and in dialogs a step smaller (his ask, 17 Nov: "some of the different
+   buttons could be smaller though. but not too small"): 34 px high, 13.5 px text - under Apple's
+   44 pt advice, well over WCAG 2.2's 24 px minimum. The tab bar, the header and the colour
+   circles keep their size. */
+html.phone :is(main,aside,.dlg,#colmodal,#pinmodal,#wlbox) button:not(.pip):not(.x){
+  font-size:13.5px;padding:6px 11px;min-height:34px;border-radius:9px}
+html.phone .phside{padding:10px 14px;font-size:14px}
 /* Safari draws a select its own way (white, with the app's pale text on it): drawn here instead */
 html.phone select{-webkit-appearance:none;appearance:none;background-color:var(--panel);color:var(--ink);
   padding-right:34px;background-repeat:no-repeat;background-size:6px 6px;
