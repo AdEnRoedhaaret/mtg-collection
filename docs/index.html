@@ -6,7 +6,7 @@
 <!-- What this page may run and reach (dev/README.md, "What the page may load"). The one script is
      named by its hash, which build.js works out: nothing else runs, not even a handler written
      into the page by a fault. Requests go to the hosts listed here and to no other. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-v3RPH2muicJGheuIYGrQzNfOH3zRQ/fQpEYt2prAslQ='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://*.scryfall.io https://api.scryfall.com; connect-src https://api.scryfall.com https://data.scryfall.io https://json.edhrec.com https://adenroedhaaret.github.io; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-98nBi03pxbtd9pgd28r6/MpykNeLsIVYobnsndJVIcA='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://*.scryfall.io https://api.scryfall.com; connect-src https://api.scryfall.com https://data.scryfall.io https://json.edhrec.com https://adenroedhaaret.github.io; base-uri 'none'; form-action 'none'">
 <title>MTG Collection</title>
 <style>
 :root{
@@ -311,6 +311,13 @@ html.phone .hdrdata{display:none;flex-basis:100%;text-align:left!important;paddi
 html.phone header.dataopen .hdrdata{display:block}
 html.phone .hdrdata #drop{display:block!important;text-align:center}
 html.phone #fsbar button{min-height:38px;margin:4px 6px 0 0!important;font-size:13px!important}
+.phview{display:none}
+html.phone .phview{display:flex;gap:9px;align-items:flex-start;margin:2px 0 10px;padding:9px 10px;cursor:pointer;
+  border:1px solid var(--line);border-radius:10px;font-size:13px;line-height:1.45;color:var(--ink2)}
+html.phone .phview input{width:20px;height:20px;flex:none;margin:1px 0 0}
+/* while View only is on, the Backup button says so */
+html.phone.viewonly #phdata{font-size:0;border-color:#e7ca68}
+html.phone.viewonly #phdata::before{content:"View only";font-size:13.5px;color:#e7ca68}
 #phdata,#phcols{display:none}
 html.phone #phdata,html.phone #phcols{display:inline-block}
 html.phone #phcols{padding:8px 10px;font-size:13.5px;min-height:38px;font-variant-numeric:tabular-nums}
@@ -17437,7 +17444,17 @@ function updBoot(){
 const WEB_WORLD = "world";       // the key in filestore.js's IndexedDB store
 let webTimer = null, webQuiet = false, webOn = false;
 
-const webSaveSoon = () => { if (!webOn || webQuiet) return; clearTimeout(webTimer); webTimer = setTimeout(webSaveNow, 800); };
+/* View only (his choice, 17 Nov: "Yes, add a switch"): while it is on, nothing changed on the phone
+   is kept - each start shows the backup as it was opened. Opening a backup file is still kept:
+   that is how the phone gets newer cards. The switch is under Backup (phone.js). */
+const WEB_VIEWKEY = "mtgSetBrowser.viewonly.v1";
+const webViewOnly = () => { try { return localStorage.getItem(WEB_VIEWKEY) === "1"; } catch (e){ return false; } };
+function webSetViewOnly(on){
+  try { if (on) localStorage.setItem(WEB_VIEWKEY, "1"); else localStorage.removeItem(WEB_VIEWKEY); } catch (e){}
+  document.documentElement.classList.toggle("viewonly", !!on && webOn);
+}
+
+const webSaveSoon = () => { if (!webOn || webQuiet || webViewOnly()) return; clearTimeout(webTimer); webTimer = setTimeout(webSaveNow, 800); };
 async function webSaveNow(){
   clearTimeout(webTimer); webTimer = null;
   try {
@@ -17463,6 +17480,14 @@ async function webBoot(){
     if (typeof f === "function") window[n] = function(){ const r = f.apply(this, arguments); webSaveSoon(); return r; };
   }
   window.addEventListener("pagehide", () => { if (webTimer) webSaveNow(); });
+  // a backup file that is opened is kept, also in View only
+  const apply = window.abApplyWorld;
+  if (typeof apply === "function") window.abApplyWorld = async function(){
+    const r = await apply.apply(this, arguments);
+    if (!webQuiet) await webSaveNow();
+    return r;
+  };
+  webSetViewOnly(webViewOnly());
   let text = null;
   try { text = await fsIdbGet(WEB_WORLD); } catch (e){}
   if (typeof text !== "string") return;
@@ -17544,6 +17569,17 @@ function phoneBoot(){
     hdr.classList.toggle("dataopen", open);
     b.classList.toggle("on", open);
   });
+  // View only (webstore.js), on the phone page only: the first line under Backup
+  if (typeof webOn !== "undefined" && webOn){
+    const v = document.createElement("label");
+    v.className = "phview";
+    v.innerHTML = `<input type="checkbox" id="phview"> <span><b>View only</b> &mdash; changes made on this phone are not kept;
+      each start shows the backup as you opened it. Opening a backup file still works.</span>`;
+    fsbar.parentElement.insertBefore(v, fsbar.parentElement.firstChild);
+    const box = v.querySelector("input");
+    box.checked = webViewOnly();
+    box.addEventListener("change", () => webSetViewOnly(box.checked));
+  }
   // cards per row in the card grids: 2, 3 or 4 (his ask, 17 Nov: "an option to show each card
   // printing smaller so that more can fit on screen at once"), remembered
   const PHCOLS_KEY = "mtgSetBrowser.phonecols.v1";
